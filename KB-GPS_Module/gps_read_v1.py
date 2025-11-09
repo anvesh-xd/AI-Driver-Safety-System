@@ -4,33 +4,56 @@ import pynmea2
 
 ser = serial.Serial('/dev/serial0', 9600, timeout=1) #Connect to GPS module via serial port [UART0, GPIO 14/15], 9600 baud rate
 
+#global variables for important data including latitude, longitude, altitude, speed in knots
+latitude = None
+longitude = None
+altitude = None
+speed_knots = None
+speed_over_grnd = None
+
+enable_print = True  #Enable or disable printing of data
+
+
 
 #Currently using GGA, GSA, GSV, RMC, and VTG NMEA sentences
 
 #Get latitude, longitude, and altitude from GGA message
 def read_GGA(msg): #Global Positioning System Fix Data
     if isinstance(msg, pynmea2.types.talker.GGA):
-        print(f"Latitude: {msg.latitude}, Longitude: {msg.longitude}, Altitude: {msg.altitude}\n")
+        if enable_print:
+            print(f"Latitude: {msg.latitude}, Longitude: {msg.longitude}, Altitude: {msg.altitude}\n")
+        global latitude, longitude, altitude #Update global variables
+        latitude = msg.latitude
+        longitude = msg.longitude
+        altitude = msg.altitude
 
 #Get DOP and active satellites from GSA message
 def read_GSA(msg): #GNSS DOP and Active Satellites
     if isinstance(msg, pynmea2.types.talker.GSA):
-        print(f"DOP: {msg.pdop}, Active Satellites: {msg.sv_id_1}, {msg.sv_id_2}, {msg.sv_id_3}, {msg.sv_id_4}, {msg.sv_id_5}, {msg.sv_id_6}, {msg.sv_id_7}, {msg.sv_id_8}, {msg.sv_id_9}, {msg.sv_id_10}, {msg.sv_id_11}, {msg.sv_id_12}\n")
+        if enable_print:
+            print(f"DOP: {msg.pdop}, Active Satellites: {msg.sv_id_1}, {msg.sv_id_2}, {msg.sv_id_3}, {msg.sv_id_4}, {msg.sv_id_5}, {msg.sv_id_6}, {msg.sv_id_7}, {msg.sv_id_8}, {msg.sv_id_9}, {msg.sv_id_10}, {msg.sv_id_11}, {msg.sv_id_12}\n")
 
 #Get number of satellites in view and their PRNs from GSV message
 def read_GSV(msg): #GNSS Satellites in View
     if isinstance(msg, pynmea2.types.talker.GSV):
-        print(f"Satellites in View: {msg.num_sv_in_view}, Satellite PRNs: {msg.sv_prn_num_1}, {msg.sv_prn_num_2}, {msg.sv_prn_num_3}, {msg.sv_prn_num_4}, {msg.sv_prn_num_5}, {msg.sv_prn_num_6}, {msg.sv_prn_num_7}, {msg.sv_prn_num_8}\n")
+        if enable_print:
+            print(f"Satellites in View: {msg.num_sv_in_view}, Satellite PRNs: {msg.sv_prn_num_1}, {msg.sv_prn_num_2}, {msg.sv_prn_num_3}, {msg.sv_prn_num_4}, {msg.sv_prn_num_5}, {msg.sv_prn_num_6}, {msg.sv_prn_num_7}, {msg.sv_prn_num_8}\n")
 
 #Get speed over ground and true course from RMC message
 def read_RMC(msg): #Recommended Minimum Specific GPS/Transit Data
     if isinstance(msg, pynmea2.types.talker.RMC):
-        print(f"Speed: {msg.spd_over_grnd}, True Course: {msg.true_course}\n")
+        if enable_print:
+            print(f"Speed: {msg.spd_over_grnd}, True Course: {msg.true_course}\n")
+        global speed_over_grnd #Update global variable
+        speed_over_grnd = msg.spd_over_grnd
 
 #Get speed kilometers per hour and speed knots from VTG message
 def read_VTG(msg): #Course Over Ground and Ground Speed
     if isinstance(msg, pynmea2.types.talker.VTG):
-        print(f"Speed (m/h): {knots_to_mph(msg.spd_knots)}, Speed (km/h): {msg.spd_kmph}, Speed (knots): {msg.spd_knots}\n")
+        if enable_print:
+            print(f"Speed (m/h): {knots_to_mph(msg.spd_knots)}, Speed (km/h): {msg.spd_kmph}, Speed (knots): {msg.spd_knots}\n")
+        global speed_knots #Update global variable
+        speed_knots = msg.spd_knots
 
 #Check talker ID, should be 'GP' for GPS
 def get_talker_id(msg):
@@ -44,19 +67,20 @@ def kph_to_mph(kph):
 
 
 #Important Gets
-def get_Lat_Long(msg): #Get Latitude and Longitude from GGA message
-    if isinstance(msg, pynmea2.types.talker.GGA):
-        return msg.latitude, msg.longitude
-    return None, None
-def get_Altitude(msg): #Get Altitude from GGA message
-    if isinstance(msg, pynmea2.types.talker.GGA):
-        return msg.altitude
+def get_latitude():
+    return latitude
+def get_longitude():
+    return longitude
+def get_location(): #Returns formatted latitude and longitude
+    return "{}, {}".format(latitude, longitude) 
+def get_altitude():
+    return altitude
+def get_speed_knots():
+    return speed_knots
+def get_speed_mph():
+    if speed_knots is not None:
+        return knots_to_mph(speed_knots)
     return None
-def get_speed_knots(msg): #Get Speed in knots from RMC message
-    if isinstance(msg, pynmea2.types.talker.RMC):
-        return msg.spd_over_grnd
-    return None
-
 
 
 #Parse NMEA sentence and call appropriate functions
@@ -76,7 +100,6 @@ def parse_nmea_sentence(sentence):
 #Continuously read from serial port
 while True:
     line = ser.readline().decode('ascii', errors='replace')
-    print("NMEA Sentence:", line.strip(), "\n")
+    if enable_print:
+        print(f"Raw NMEA Sentence: {line.strip()}\n")
     parse_nmea_sentence(line)
-
-
