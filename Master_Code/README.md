@@ -1,0 +1,1 @@
+Code related to master code, including YOLO algorithm recognition software, Speed estimate software for the GPS module and motion sensor, and code to output the alerts formed by these include including miscellaneous code.
