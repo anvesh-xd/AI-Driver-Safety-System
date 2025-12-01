@@ -1,6 +1,6 @@
 import os
 from ultralytics import YOLO
-#not working fully currently
+#not working fully currently will look into it further
 def main():
     # Load Custom-Trained Model
     
