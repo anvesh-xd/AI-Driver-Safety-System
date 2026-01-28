@@ -1,0 +1,26 @@
+# Sentinel: AI Driver Safety System 🚗⚡
+
+**Status:** Active Development (Capstone 2026)
+
+## 📖 Overview
+This is an affordable, AI-powered driver assistant designed to retro-fit older vehicles with modern safety features. It uses a **Raspberry Pi** and a custom **YOLOv8** model to detect traffic signs, pedestrians, and road hazards in real-time, helping drivers avoid accidents caused by fatigue or poor visibility.
+
+## 🎯 The Goal
+Modern cars have ADAS (Advanced Driver Assistance Systems). Most cars in the world don't. Sentinel aims to bridge that gap by providing a low-cost, offline, and privacy-focused safety solution.
+
+## ✨ Key Features
+* **Real-Time Detection:** Instantly identifies Stop signs, Speed Limits, and Pedestrians.
+* **Edge Computing:** Runs entirely offline on a Raspberry Pi—no internet needed.
+* **Low Latency:** Optimized using **ONNX** to ensure instant alerts (<100ms delay).
+* **Driver Alerts:** Provides visual overlays and audio warnings for critical hazards.
+
+## 🛠️ Tech Stack
+* **Hardware:** Raspberry Pi 4/5, Camera Module.
+* **AI Model:** YOLOv8 (Trained on custom datasets), converted to ONNX.
+* **Language:** Python 3.
+* **Libraries:** Ultralytics, NumPy, OpenCV, ONNX Runtime.
+
+## 🚀 Roadmap
+- [x] **Phase 1:** Collect and clean traffic sign datasets.
+- [ ] **Phase 2:** Train and optimize the YOLOv8n model for edge devices.
+- [ ] **Phase 3:** Deploy to Raspberry Pi and field test in a vehicle.
