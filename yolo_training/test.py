@@ -15,9 +15,9 @@ def main():
     model = YOLO(model_path)
 
     # Set Test Image Path 
-    image_name = '00005_00014_00005_png.rf.0e24dd3583d580dadb9d69e73a08e78c.jpg' 
+    image_name = '000495_jpg.rf.62cc333852734fdf12c38fb00d5a8273.jpg' 
     
-    test_image_path = os.path.join('..', 'datasets', 'traffic-signs', 'test', 'images', image_name)
+    test_image_path = os.path.join('..', 'datasets', 'traffic_signs', 'test', 'images', image_name)
 
     # Check if the test image exists
     if not os.path.exists(test_image_path):

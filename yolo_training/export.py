@@ -1,6 +1,6 @@
 import os
 from ultralytics import YOLO
-<<<<<<< HEAD
+
 #not working fully currently will look into it further
 =======
 #not working fully currently

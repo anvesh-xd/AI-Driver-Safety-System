@@ -3,14 +3,13 @@ from ultralytics import YOLO
 
 def main():
     
-    # We use 'yolov8n.pt' 
-    # This is the smallest, fastest model for prototype testing and easy to transfer to Pi
+    # I am currently using 'yolov8n.pt' instead of YOLOv11 to get a light pt file 
     print("Loading pre-trained YOLOv8n model...")
     model = YOLO('yolov8n.pt')
 
     # 'data' points to the .yaml file 
-    # 'epochs' is how many times to train on the full dataset, we did 10 but 50-100 is preferred
-    # 'imgsz' is the image size. 640 is a good default.
+    # 'epochs' is how many times to train on the full dataset, we did 10 but 50-100 is preferred and we will go to 50
+    # 'imgsz' is the image size. 640 is a good default that we are currently using 
     data_yaml_path = os.path.join(os.path.dirname(__file__), 'data.yaml')
     
     print(f"Starting training with data from: {data_yaml_path}")
