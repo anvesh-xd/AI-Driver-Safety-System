@@ -7,7 +7,7 @@ sensor = mpu6050(0x68)
 
 # --- Configuration ---
 SAMPLE_INTERVAL = 0.05   # seconds between readings
-THRESHOLD = 500.0        # degrees/sec change to trigger alert
+THRESHOLD = 750.0        # degrees/sec change to trigger alert
 previous_gyro = np.array([0.0, 0.0, 0.0])
 
 print("Monitoring gyro data for sudden momentum changes...\n")
