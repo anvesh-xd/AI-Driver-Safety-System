@@ -1,12 +1,25 @@
 import subprocess
+import queue
 
-print("Starting speaker test...")
+def speak(text):
+    subprocess.run(
+        ["espeak-ng", text],
+        check=False,          # never crash system on audio failure
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
 
-text = " You are going way too fast Mister "
+def run(audio_queue):
+    print("Audio process started")
 
-subprocess.run(
-    ["espeak-ng", text],
-    check=True
-)
+    while True:
+        try:
+            msg = audio_queue.get(timeout=1)
 
-print("Speaker test finished.")
+            if msg["type"] == "alert":
+                speak(msg["message"])
+
+        except queue.Empty:
+            pass
+        except Exception:
+            pass
