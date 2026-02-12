@@ -2,44 +2,47 @@ from mpu6050 import mpu6050
 import time
 import numpy as np
 
-# Initialize MPU6050 (I2C address 0x68)
+# Initialize MPU6050
 sensor = mpu6050(0x68)
 
 # --- Configuration ---
-SAMPLE_INTERVAL = 0.05   # seconds between readings
-THRESHOLD = 750.0        # degrees/sec change to trigger alert
-previous_gyro = np.array([0.0, 0.0, 0.0])
+SAMPLE_INTERVAL = 0.05     # 20 Hz
+THRESHOLD = 750.0          # sudden change trigger
 
-print("Monitoring gyro data for sudden momentum changes...\n")
+def run(queue):
+    previous_gyro = np.array([0.0, 0.0, 0.0])
 
-while True:
-    try:
-        # Read gyro data (angular velocity in deg/s)
-        gyro_data = sensor.get_gyro_data()
-        gx, gy, gz = gyro_data['x'], gyro_data['y'], gyro_data['z']
+    while True:
+        try:
+            gyro_data = sensor.get_gyro_data()
+            gx, gy, gz = gyro_data['x'], gyro_data['y'], gyro_data['z']
 
-        # Current gyro vector
-        current_gyro = np.array([gx, gy, gz])
+            current_gyro = np.array([gx, gy, gz])
 
-        # Compute magnitude of change (delta)
-        delta = np.linalg.norm(current_gyro - previous_gyro)
+            # Magnitude of change
+            delta = np.linalg.norm(current_gyro - previous_gyro)
 
-        # Update previous reading
-        previous_gyro = current_gyro
+            previous_gyro = current_gyro
 
-        # Detect sudden movement
-        if delta > THRESHOLD:
-            print(f"⚠️ Sudden change detected! Δ={delta:.1f}°/s "
-                  f"(gx={gx:.1f}, gy={gy:.1f}, gz={gz:.1f})")
+            output = {
+                "gx": gx,
+                "gy": gy,
+                "gz": gz,
+                "delta": delta,
+                "sudden_motion": delta > THRESHOLD,
+                "timestamp": time.time()
+            }
 
-        # Optional: print running data
-        # print(f"Gyro: X={gx:.2f}, Y={gy:.2f}, Z={gz:.2f}, Δ={delta:.1f}")
+            # Prevent queue overflow (important on Pi)
+            if queue.full():
+                try:
+                    queue.get_nowait()
+                except:
+                    pass
 
-        time.sleep(SAMPLE_INTERVAL)
+            queue.put(output)
 
-    except KeyboardInterrupt:
-        print("\nStopped by user.")
-        break
-    except Exception as e:
-        print("Error:", e)
-        time.sleep(0.5)
+            time.sleep(SAMPLE_INTERVAL)
+
+        except Exception:
+            time.sleep(0.1)
