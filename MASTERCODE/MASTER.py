@@ -9,17 +9,26 @@ import audio_module
 
 
 def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
-    latest = {
-        "gps": None,
-        "gyro": None,
-        "yolo": None
-    }
+    import time
+    import queue
 
-    last_alert = 0
-    ALERT_COOLDOWN = 3  # seconds
+    latest = {"gps": None, "gyro": None, "yolo": None}
+
+    last_alert_time = {}
+    ALERT_COOLDOWN = 3.0      # seconds per alert type
+
+    def can_alert(alert_name):
+        now = time.time()
+        if alert_name not in last_alert_time:
+            last_alert_time[alert_name] = 0
+        if now - last_alert_time[alert_name] > ALERT_COOLDOWN:
+            last_alert_time[alert_name] = now
+            return True
+        return False
 
     while True:
-        # ---- Drain queues (always keep newest data) ----
+
+        # ---- Drain queues (keep freshest data) ----
         for name, q in [("gps", gps_q), ("gyro", gyro_q), ("yolo", yolo_q)]:
             try:
                 while True:
@@ -27,24 +36,79 @@ def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
             except queue.Empty:
                 pass
 
-        # ---- Decision logic ----
         if all(latest.values()):
-            speed = latest["gps"]["speed"]
+
+            speed = latest["gps"]["speed_mph"] or 0
+            sudden_motion = latest["gyro"]["sudden_motion"]
             objects = latest["yolo"]["objects"]
 
-            for obj in objects:
-                if obj["label"] == "pedestrian":
-                    if speed > 3 and obj["distance"] < 15:
-                        now = time.time()
-                        if now - last_alert > ALERT_COOLDOWN:
-                            audio_q.put({
-                                "type": "alert",
-                                "message": "Warning: Pedestrian ahead",
-                                "priority": "high"
-                            })
-                            last_alert = now
+            pedestrian_close = False
+            vehicle_close = False
 
-        time.sleep(0.02)  # ~50 Hz
+            for obj in objects:
+                label = obj["label"]
+
+                # Distance placeholder logic
+                distance = obj.get("distance", 999)
+
+                if label == "pedestrian" and distance < 15:
+                    pedestrian_close = True
+
+                if label in ["car", "truck", "bus"] and distance < 10:
+                    vehicle_close = True
+
+            # ================================
+            # RULE SET
+            # ================================
+
+            # ---- Pedestrian Risk ----
+            if pedestrian_close:
+
+                if speed > 20:
+                    if can_alert("pedestrian_critical"):
+                        audio_q.put({
+                            "type": "alert",
+                            "priority": "critical",
+                            "message": "CRITICAL WARNING. Pedestrian ahead."
+                        })
+
+                elif speed > 5:
+                    if can_alert("pedestrian_warning"):
+                        audio_q.put({
+                            "type": "alert",
+                            "priority": "high",
+                            "message": "Warning. Pedestrian ahead."
+                        })
+
+            # ---- Sudden Motion Detection ----
+            if sudden_motion and speed > 10:
+                if can_alert("sudden_motion"):
+                    audio_q.put({
+                        "type": "alert",
+                        "priority": "high",
+                        "message": "Warning. Abrupt vehicle movement detected."
+                    })
+
+            # ---- Forward Vehicle Proximity ----
+            if vehicle_close and speed > 10:
+                if can_alert("vehicle_close"):
+                    audio_q.put({
+                        "type": "alert",
+                        "priority": "medium",
+                        "message": "Caution. Vehicle ahead."
+                    })
+
+            # ---- High Speed Advisory ----
+            if speed > 35:
+                if can_alert("overspeed"):
+                    audio_q.put({
+                        "type": "alert",
+                        "priority": "low",
+                        "message": "Reduce speed."
+                    })
+
+        time.sleep(0.02)
+
 
 
 def main():
