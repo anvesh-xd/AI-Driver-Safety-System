@@ -1,3 +1,4 @@
+
 import time
 import multiprocessing as mp
 import queue
@@ -36,76 +37,85 @@ def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
             except queue.Empty:
                 pass
 
-        if all(latest.values()):
+        gps_data = latest["gps"] or {}
+        gyro_data = latest["gyro"] or {}
+        yolo_data = latest["yolo"] or {}
+        speed = gps_data.get("speed_mph", 0) or 0
+        sudden_motion = gyro_data.get("sudden_motion", False)
+        objects = yolo_data.get("objects", []) or []
+        pedestrian_close = False
+        vehicle_close = False
 
-            speed = latest["gps"]["speed_mph"] or 0
-            sudden_motion = latest["gyro"]["sudden_motion"]
-            objects = latest["yolo"]["objects"]
+        for obj in objects:
+            label = obj["label"]
+            
+            # Distance placeholder logic
+            distance = obj.get("distance", 999)
+            
+            if label == "pedestrian" and distance < 15:
+                pedestrian_close = True
 
-            pedestrian_close = False
-            vehicle_close = False
+            if label in ["car", "truck", "bus"] and distance < 10:
+                vehicle_close = True
 
-            for obj in objects:
-                label = obj["label"]
+        # ===============================
+        # RULE SET
+        # ================================
+        
+        # ---- Pedestrian Risk ----
+        if pedestrian_close:
 
-                # Distance placeholder logic
-                distance = obj.get("distance", 999)
-
-                if label == "pedestrian" and distance < 15:
-                    pedestrian_close = True
-
-                if label in ["car", "truck", "bus"] and distance < 10:
-                    vehicle_close = True
-
-            # ================================
-            # RULE SET
-            # ================================
-
-            # ---- Pedestrian Risk ----
-            if pedestrian_close:
-
-                if speed > 20:
-                    if can_alert("pedestrian_critical"):
-                        audio_q.put({
-                            "type": "alert",
-                            "priority": "critical",
-                            "message": "CRITICAL WARNING. Pedestrian ahead."
-                        })
-
-                elif speed > 5:
-                    if can_alert("pedestrian_warning"):
-                        audio_q.put({
-                            "type": "alert",
-                            "priority": "high",
-                            "message": "Warning. Pedestrian ahead."
-                        })
-
-            # ---- Sudden Motion Detection ----
-            if sudden_motion and speed > 10:
-                if can_alert("sudden_motion"):
+            if speed > 20:
+                if can_alert("pedestrian_critical"):
+                    audio_q.put({
+                        "type": "alert",
+                        "priority": "critical",
+                        "message": "CRITICAL WARNING. Pedestrian ahead."
+                    })
+                    
+            elif speed > 5:
+                if can_alert("pedestrian_warning"):
                     audio_q.put({
                         "type": "alert",
                         "priority": "high",
-                        "message": "Warning. Abrupt vehicle movement detected."
+                        "message": "Warning. Pedestrian ahead."
                     })
 
-            # ---- Forward Vehicle Proximity ----
-            if vehicle_close and speed > 10:
-                if can_alert("vehicle_close"):
-                    audio_q.put({
-                        "type": "alert",
-                        "priority": "medium",
-                        "message": "Caution. Vehicle ahead."
-                    })
+        # ---- Sudden Motion Detection ----
+        if sudden_motion:
+            if can_alert("sudden_motion"):
+                audio_q.put({
+                    "type": "alert",
+                    "priority": "high",
+                    "message": "Warning. Abrupt vehicle movement detected."
+                })
 
-            # ---- High Speed Advisory ----
-            if speed > 35:
-                if can_alert("overspeed"):
-                    audio_q.put({
-                        "type": "alert",
-                        "priority": "low",
-                        "message": "Reduce speed."
-                    })
+        # ---- Forward Vehicle Proximity ----
+        if vehicle_close and speed > 10:
+            if can_alert("vehicle_close"):
+                audio_q.put({
+                    "type": "alert",
+                    "priority": "medium",
+                    "message": "Caution. Vehicle ahead."
+                })
+
+        # ---- High Speed Advisory ----
+        if speed > 35:
+            if can_alert("overspeed"):
+                audio_q.put({
+                    "type": "alert",
+                    "priority": "low",
+                    "message": "Reduce speed."
+                })
+        if label == 'Stop':
+            if can_alert("Stop_Sign"):
+                audio_q.put({
+                    "type": "alert",
+                    "priority": "high",
+                    "message": "Warning. Stop sign detected."
+                })
+                    
+            
 
         time.sleep(0.02)
 
