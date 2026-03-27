@@ -7,7 +7,7 @@ sensor = mpu6050(0x68)
 
 # --- Configuration ---
 SAMPLE_INTERVAL = 0.05     # 20 Hz
-THRESHOLD = 750.0          # sudden change trigger
+THRESHOLD = 150.0          # sudden change trigger
 
 def run(queue):
     previous_gyro = np.array([0.0, 0.0, 0.0])
