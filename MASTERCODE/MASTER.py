@@ -1,4 +1,5 @@
 
+
 import time
 import multiprocessing as mp
 import queue
@@ -17,6 +18,7 @@ def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
 
     last_alert_time = {}
     ALERT_COOLDOWN = 3.0      # seconds per alert type
+    speed_limit = 100
 
     def can_alert(alert_name):
         now = time.time()
@@ -40,11 +42,13 @@ def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
         gps_data = latest["gps"] or {}
         gyro_data = latest["gyro"] or {}
         yolo_data = latest["yolo"] or {}
-        speed = gps_data.get("speed_mph", 0) or 0
+        speed = gps_data.get("speed_mph", 0)
         sudden_motion = gyro_data.get("sudden_motion", False)
+        delta = gyro_data.get("delta", 0)
         objects = yolo_data.get("objects", []) or []
         pedestrian_close = False
         vehicle_close = False
+        stop_close = False
 
         for obj in objects:
             label = obj["label"]
@@ -52,72 +56,73 @@ def fusion_loop(gps_q, gyro_q, yolo_q, audio_q):
             # Distance placeholder logic
             distance = obj.get("distance", 999)
             
-            if label == "pedestrian" and distance < 15:
-                pedestrian_close = True
-
-            if label in ["car", "truck", "bus"] and distance < 10:
-                vehicle_close = True
-
+            if label == "Speed Limit 5":
+                speed_limit = 5;
+            if label == "Speed Limit 10":
+                speed_limit = 10;
+            if label == "Speed Limit 15":
+                speed_limit = 15;
+            if label == "Speed Limit 20":
+                speed_limit = 20;
+            if label == "Speed Limit 25":
+                speed_limit = 25;
+            if label == "Speed Limit 30":
+                speed_limit = 30;
+            if label == "Speed Limit 35":
+                speed_limit = 35;
+            if label == "Speed Limit 40":
+                speed_limit = 40;
+            if label == "Speed Limit 45":
+                speed_limit = 45;
+            if label == "Speed Limit 50":
+                speed_limit = 50;
+            if label == "Speed Limit 55":
+                speed_limit = 55;
+            if label == "Speed Limit 60":
+                speed_limit = 60
+            if label == "Speed Limit 65":
+                speed_limit = 65;
+            if label == "Speed Limit 70":
+                speed_limit = 70;
+            if label == "Speed Limit 75":
+                speed_limit = 75;
+            if label == "Speed Limit 80":
+                speed_limit = 80;
+            if label == "Stop":
+                stop_close = True
         # ===============================
         # RULE SET
         # ================================
         
-        # ---- Pedestrian Risk ----
-        if pedestrian_close:
-
-            if speed > 20:
-                if can_alert("pedestrian_critical"):
-                    audio_q.put({
-                        "type": "alert",
-                        "priority": "critical",
-                        "message": "CRITICAL WARNING. Pedestrian ahead."
-                    })
-                    
-            elif speed > 5:
-                if can_alert("pedestrian_warning"):
-                    audio_q.put({
-                        "type": "alert",
-                        "priority": "high",
-                        "message": "Warning. Pedestrian ahead."
-                    })
-
         # ---- Sudden Motion Detection ----
         if sudden_motion:
             if can_alert("sudden_motion"):
+                print("Sudden Motion:", delta)
                 audio_q.put({
                     "type": "alert",
                     "priority": "high",
                     "message": "Warning. Abrupt vehicle movement detected."
                 })
-
-        # ---- Forward Vehicle Proximity ----
-        if vehicle_close and speed > 10:
-            if can_alert("vehicle_close"):
-                audio_q.put({
-                    "type": "alert",
-                    "priority": "medium",
-                    "message": "Caution. Vehicle ahead."
-                })
-
+                
         # ---- High Speed Advisory ----
-        if speed > 35:
+        if speed > 10:
             if can_alert("overspeed"):
                 audio_q.put({
                     "type": "alert",
                     "priority": "low",
                     "message": "Reduce speed."
                 })
-        if label == 'Stop':
+                
+        # ---- Stop Sign Ahead ----
+        if stop_close:
             if can_alert("Stop_Sign"):
                 audio_q.put({
                     "type": "alert",
                     "priority": "high",
                     "message": "Warning. Stop sign detected."
                 })
-                    
-            
-
-        time.sleep(0.02)
+        print(speed)
+        time.sleep(1)
 
 
 
